@@ -1,0 +1,732 @@
+* Mosaique
+
+#+begin_src ipython :session genart :file :exports both
+  import cairo
+  from IPython.display import Image, display
+  from math import pi
+  from io import BytesIO
+
+  def disp(draw_func):
+      h, w = 1000, 1000
+      surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, h, w)
+      ctx = cairo.Context(surface)
+      draw_func(ctx, h, w)
+      with BytesIO() as fileobj:
+          surface.write_to_png(fileobj)
+          display(Image(fileobj.getvalue(), width=w))
+#+end_src
+
+#+RESULTS:
+: # Out[180]:
+
+#+begin_src ipython :session genart :file  :exports both
+
+
+  def rounded_square_path(cr: cairo.Context, filled: bool=True) -> cairo.Context:
+
+      cr.set_line_width(0.04)
+
+
+      # a custom shape, that could be wrapped in a function
+      x0 = 0.1  # parameters like cairo_rectangle
+      y0 = 0.1
+      rect_width = 0.8
+      rect_height = 0.8
+      radius = 0.4  # and an approximate curvature radius
+
+      x1 = x0 + rect_width
+      y1 = y0 + rect_height
+
+      if rect_width / 2 < radius:
+          if rect_height / 2 < radius:
+              cr.move_to(x0, (y0 + y1) / 2)
+              cr.curve_to(x0, y0, x0, y0, (x0 + x1) / 2, y0)
+              cr.curve_to(x1, y0, x1, y0, x1, (y0 + y1) / 2)
+              cr.curve_to(x1, y1, x1, y1, (x1 + x0) / 2, y1)
+              cr.curve_to(x0, y1, x0, y1, x0, (y0 + y1) / 2)
+          else:
+              cr.move_to(x0, y0 + radius)
+              cr.curve_to(x0, y0, x0, y0, (x0 + x1) / 2, y0)
+              cr.curve_to(x1, y0, x1, y0, x1, y0 + radius)
+              cr.line_to(x1, y1 - radius)
+              cr.curve_to(x1, y1, x1, y1, (x1 + x0) / 2, y1)
+              cr.curve_to(x0, y1, x0, y1, x0, y1 - radius)
+      else:
+          if rect_height / 2 < radius:
+              cr.move_to(x0, (y0 + y1) / 2)
+              cr.curve_to(x0, y0, x0, y0, x0 + radius, y0)
+              cr.line_to(x1 - radius, y0)
+              cr.curve_to(x1, y0, x1, y0, x1, (y0 + y1) / 2)
+              cr.curve_to(x1, y1, x1, y1, x1 - radius, y1)
+              cr.line_to(x0 + radius, y1)
+              cr.curve_to(x0, y1, x0, y1, x0, (y0 + y1) / 2)
+          else:
+              cr.move_to(x0, y0 + radius)
+              cr.curve_to(x0, y0, x0, y0, x0 + radius, y0)
+              cr.line_to(x1 - radius, y0)
+              cr.curve_to(x1, y0, x1, y0, x1, y0 + radius)
+              cr.line_to(x1, y1 - radius)
+              cr.curve_to(x1, y1, x1, y1, x1 - radius, y1)
+              cr.line_to(x0 + radius, y1)
+              cr.curve_to(x0, y1, x0, y1, x0, y1 - radius)
+
+      cr.close_path()
+      return cr
+#+end_src
+
+#+RESULTS:
+: # Out[75]:
+
+#+begin_src ipython :session genart :file  :exports both :results drawer
+  @disp
+  def draw(cr: cairo.Context, width: int, height: int):
+
+      pattern = cairo.LinearGradient(0, 0, 1, 1)
+      pattern.add_color_stop_rgb(0, 0, 0.3, 0.8)
+      pattern.add_color_stop_rgb(1, 0, 0.8, 0.3)
+
+      cr.scale(width, height)
+      cr = rounded_square_path(cr)
+      cr.set_line_width(0.04)
+
+
+      #cr.scale(width/n, height/n)
+
+      cr.set_source(pattern)
+      cr.fill_preserve()
+      cr.set_source_rgb(96, 125, 139)
+      cr.stroke()
+      #cr.translate(500, 500)
+#+end_src
+
+#+RESULTS:
+:results:
+# Out[38]:
+[[file:./obipy-resources/2Ef1LO.png]]
+:end:
+
+#+begin_src ipython :session genart :file  :exports both :results drawer
+  from random import shuffle, sample, choice
+  from typing import Tuple
+
+  from itertools import islice
+  import numpy as np
+  import math
+
+  def hex_to_rgb(h: str)->Tuple[int, int, int]:
+      return tuple(int(h[i:i+2], 16)/255 for i in range(3))
+
+  @disp
+  def draw(cr: cairo.Context, width: int, height: int):
+      #c = {"Cornflower Blue":"7899d4","Deep Space Sparkle":"4a5859","Cultured":"f9f8f8","Fuzzy Wuzzy":"c1666b","Cinnabar":"d64933"}
+
+      #c = {"Fire Opal":"ef6351","Red Violet Crayola":"af4d98","Illuminating Emerald":"1a936f","Bisque":"f1dabf","Capri":"5cc8ff"}
+      #c = {"Raisin Black":"202030","English Violet":"39304a","Davys Grey":"635c51","Bisque":"f1dabf","Shadow":"7d7461"}
+      #c = [hex_to_rgb(h) for h in c.values()]
+      c = [{"name":"Raisin Black","hex":"202030","rgb":[32,32,48],"cmyk":[33,33,0,81],"hsb":[240,33,19],"hsl":[240,20,16],"lab":[13,5,-11]},{"name":"English Violet","hex":"39304a","rgb":[57,48,74],"cmyk":[23,35,0,71],"hsb":[261,35,29],"hsl":[261,21,24],"lab":[22,10,-15]},{"name":"Davys Grey","hex":"635c51","rgb":[99,92,81],"cmyk":[0,7,18,61],"hsb":[37,18,39],"hsl":[37,10,35],"lab":[39,1,7]},{"name":"Bisque","hex":"f1dabf","rgb":[241,218,191],"cmyk":[0,10,21,5],"hsb":[32,21,95],"hsl":[32,64,85],"lab":[88,4,16]},{"name":"Shadow","hex":"7d7461","rgb":[125,116,97],"cmyk":[0,7,22,51],"hsb":[41,22,49],"hsl":[41,13,44],"lab":[49,0,12]}]
+      c = [{"name":"Gunmetal","hex":"022b3a","rgb":[2,43,58],"cmyk":[97,26,0,77],"hsb":[196,97,23],"hsl":[196,93,12],"lab":[16,-7,-13]},{"name":"Metallic Seaweed","hex":"1f7a8c","rgb":[31,122,140],"cmyk":[78,13,0,45],"hsb":[190,78,55],"hsl":[190,64,34],"lab":[47,-19,-17]},{"name":"Beau Blue","hex":"bfdbf7","rgb":[191,219,247],"cmyk":[23,11,0,3],"hsb":[210,23,97],"hsl":[210,78,86],"lab":[86,-3,-17]},{"name":"Lavender Web","hex":"e1e5f2","rgb":[225,229,242],"cmyk":[7,5,0,5],"hsb":[226,7,95],"hsl":[226,40,92],"lab":[91,1,-7]},{"name":"White","hex":"ffffff","rgb":[255,255,255],"cmyk":[0,0,0,0],"hsb":[0,0,100],"hsl":[0,0,100],"lab":[100,0,0]}]
+      c = [{"name":"Popstar","hex":"b24c63","rgb":[178,76,99],"cmyk":[0,57,44,30],"hsb":[346,57,70],"hsl":[346,40,50],"lab":[46,44,8]},{"name":"Han Purple","hex":"5438dc","rgb":[84,56,220],"cmyk":[62,75,0,14],"hsb":[250,75,86],"hsl":[250,70,54],"lab":[38,56,-79]},{"name":"Azure","hex":"357ded","rgb":[53,125,237],"cmyk":[78,47,0,7],"hsb":[217,78,93],"hsl":[217,84,57],"lab":[54,17,-63]},{"name":"Electric Blue","hex":"56eef4","rgb":[86,238,244],"cmyk":[65,2,0,4],"hsb":[182,65,96],"hsl":[182,88,65],"lab":[87,-38,-15]},{"name":"Malachite","hex":"32e875","rgb":[50,232,117],"cmyk":[78,0,50,9],"hsb":[142,78,91],"hsl":[142,80,55],"lab":[82,-68,43]}]
+      #c = [{"name":"Dark Lava","hex":"463f3a","rgb":[70,63,58],"cmyk":[0,10,17,73],"hsb":[25,17,27],"hsl":[25,9,25],"lab":[27,2,4]},{"name":"Middle Grey","hex":"8a817c","rgb":[138,129,124],"cmyk":[0,7,10,46],"hsb":[21,10,54],"hsl":[21,6,51],"lab":[55,2,4]},{"name":"Pale Silver","hex":"bcb8b1","rgb":[188,184,177],"cmyk":[0,2,6,26],"hsb":[38,6,74],"hsl":[38,8,72],"lab":[75,0,4]},{"name":"Isabelline","hex":"f4f3ee","rgb":[244,243,238],"cmyk":[0,0,2,4],"hsb":[50,2,96],"hsl":[50,21,95],"lab":[96,-1,3]},{"name":"Melon","hex":"e0afa0","rgb":[224,175,160],"cmyk":[0,22,29,12],"hsb":[14,29,88],"hsl":[14,51,75],"lab":[75,16,15]}]
+      c = [{"name":"Charleston Green","hex":"272d2d","rgb":[39,45,45],"cmyk":[13,0,0,82],"hsb":[180,13,18],"hsl":[180,7,16],"lab":[18,-3,-1]},{"name":"Heliotrope Gray","hex":"a39ba8","rgb":[163,155,168],"cmyk":[3,8,0,34],"hsb":[277,8,66],"hsl":[277,7,63],"lab":[65,5,-6]},{"name":"Light Steel Blue","hex":"b8c5d6","rgb":[184,197,214],"cmyk":[14,8,0,16],"hsb":[214,14,84],"hsl":[214,27,78],"lab":[79,-1,-10]},{"name":"Alice Blue","hex":"edf5fc","rgb":[237,245,252],"cmyk":[6,3,0,1],"hsb":[208,6,99],"hsl":[208,71,96],"lab":[96,-1,-4]},{"name":"Emerald","hex":"23ce6b","rgb":[35,206,107],"cmyk":[83,0,48,19],"hsb":[145,83,81],"hsl":[145,71,47],"lab":[73,-63,38]}]
+      c = [{"name":"Medium Slate Blue","hex":"7678ed","rgb":[118,120,237],"cmyk":[50,49,0,7],"hsb":[239,50,93],"hsl":[239,77,70],"lab":[55,30,-60]},{"name":"Mango","hex":"f7b801","rgb":[247,184,1],"cmyk":[0,26,100,3],"hsb":[45,100,97],"hsl":[45,99,49],"lab":[78,11,81]},{"name":"Tangerine","hex":"f18701","rgb":[241,135,1],"cmyk":[0,44,100,5],"hsb":[34,100,95],"hsl":[34,99,47],"lab":[67,34,73]},{"name":"Persimmon","hex":"f35b04","rgb":[243,91,4],"cmyk":[0,63,98,5],"hsb":[22,98,95],"hsl":[22,97,48],"lab":[59,56,68]}]
+      c = [np.array(v['rgb'])/255 for v in c]
+
+      bg_color = np.array((66,76,85))/255
+
+      cr.rectangle(0, 0, width, height)
+      cr.set_source_rgb(*bg_color)
+      cr.fill()
+
+      n=10
+      cr.set_line_width(0.04)
+      l = [0]*14+[1]*(100-14)
+      shuffle(l)
+
+      for i in range(n):
+          for j in range(n):
+
+              cr.save()
+              cr.translate(j*width/n, i*height/n)
+              cr.scale(width/n, height/n)
+
+
+              cr = rounded_square_path(cr)
+
+              if l.pop():
+
+                  (ax, ay), (bx, by) = sample([(math.cos(i*math.pi/n), math.sin(i*math.pi/n)) for i in range(10)], 2)
+                  c1, c2 = sample(c, 2)
+                  pattern = cairo.LinearGradient(ax, ay, bx, by)
+                  pattern.add_color_stop_rgb(0, *c1)
+                  pattern.add_color_stop_rgb(1, *c2)
+                  cr.set_source(pattern)
+
+              else:
+                  cr.set_source_rgb(1, 1, 1)
+
+              cr.fill_preserve()
+
+              cr.set_source_rgb(96, 125, 139)
+              cr.stroke()
+
+              cr.restore()
+
+
+
+#+end_src
+
+#+RESULTS:
+:results:
+# Out[183]:
+[[file:./obipy-resources/JPdxUl.png]]
+:end:
+
+* Répartition territoire
+  :PROPERTIES:
+  :header-args: :tangle ./repartition.py :comments both :padline yes :session repart
+  :END:
+
+
+** Setup Numpy et typing
+#+begin_src python
+  import numpy as np
+
+  NDArrayFloat = np.typing.NDArray[np.float_]
+
+  import math
+  from typing import Optional
+#+end_src
+
+#+RESULTS:
+
+** Setup pycairo
+#+begin_src python
+  import cairo
+  from IPython.display import Image, display
+  from math import pi
+  from io import BytesIO
+
+  def disp(draw_func):
+      h, w = 1000, 1000
+      surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, h, w)
+      ctx = cairo.Context(surface)
+      draw_func(ctx, h, w)
+      with BytesIO() as fileobj:
+          surface.write_to_png(fileobj)
+          display(Image(fileobj.getvalue(), width=w))
+#+end_src
+
+#+RESULTS:
+
+** Récupération du polygone représentant la France
+#+begin_src python
+
+  P = np.loadtxt("contours_fr.csv", delimiter=',', dtype=np.float_)
+
+  def normalize(array: NDArrayFloat,
+                min_v: int=0, max_v: int=1,
+                convention_image:bool=True) -> NDArrayFloat:
+      """ Scales an array of points in the desired range"""
+      res = np.interp(array, (array.min(), array.max()), (min_v, max_v))
+      if convention_image:
+          res[:, 1] = 1-res[:, 1]
+      return res
+
+  P = normalize(P)
+
+  print(P)
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  [[0.         0.33738318]
+   [0.04766355 0.35420561]
+   [0.00934579 0.38224299]
+   [0.04205607 0.40654206]
+   [0.13271028 0.43925234]
+   [0.18878505 0.44485981]
+   [0.18878505 0.4728972 ]
+   [0.22336449 0.49906542]
+   [0.20934579 0.52056075]
+   [0.28691589 0.58037383]
+   [0.25981308 0.87476636]
+   [0.2317757  0.90280374]
+   [0.26261682 0.93551402]
+   [0.3317757  0.96261682]
+   [0.42803738 0.95607477]
+   [0.49813084 0.9953271 ]
+   [0.61214953 0.99719626]
+   [0.60560748 0.94485981]
+   [0.67663551 0.87850467]
+   [0.8271028  0.92616822]
+   [0.95514019 0.85140187]
+   [0.96168224 0.81214953]
+   [0.90373832 0.79065421]
+   [0.91869159 0.74205607]
+   [0.88411215 0.71028037]
+   [0.9317757  0.67476636]
+   [0.91121495 0.61588785]
+   [0.88598131 0.56542056]
+   [0.83457944 0.59439252]
+   [0.86542056 0.50747664]
+   [0.95046729 0.43271028]
+   [1.         0.27196262]
+   [0.89813084 0.24766355]
+   [0.86448598 0.20934579]
+   [0.79626168 0.20747664]
+   [0.74485981 0.17196262]
+   [0.75233645 0.12149533]
+   [0.69906542 0.15420561]
+   [0.65981308 0.09813084]
+   [0.56542056 0.02803738]
+   [0.49252336 0.04485981]
+   [0.48411215 0.14299065]
+   [0.38037383 0.18878505]
+   [0.42056075 0.21028037]
+   [0.3588785  0.23271028]
+   [0.27943925 0.2271028 ]
+   [0.27102804 0.18130841]
+   [0.22990654 0.18598131]
+   [0.26448598 0.3046729 ]
+   [0.14953271 0.31962617]
+   [0.12897196 0.29065421]]
+#+end_example
+
+On définit une fonction ajoutant un polygone quelconque au chemin
+/Cairo/.
+#+begin_src python
+  def polypath(cr: cairo.Context, points: NDArrayFloat) -> cairo.Context:
+      (x, y) = points[0]
+      cr.move_to(x, y)
+      for (x, y) in points[1:]:
+          cr.line_to(x, y)
+      cr.close_path()
+      return cr
+#+end_src
+
+#+RESULTS:
+
+On teste la fonction précédente en dessinant le contour dans une
+image.
+#+begin_src python
+  @disp
+  def draw(cr: cairo.Context, width: int, height: int):
+      cr.set_line_width(0.004)
+      cr.scale(width, height)
+      cr = polypath(cr, P)
+      #cr.set_line_width(0.04)
+
+      cr.set_source_rgb(96, 125, 139)
+      cr.stroke()
+      #cr.translate(500, 500)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 1000
+[[file:./.ob-jupyter/6d8ba16061e7a53dd0aef459c9db67da6ae11091.png]]
+:END:
+
+
+** Algo de séparation
+
+*** Déterminer la ligne de séparation
+
+*Idée* :
+
+Tirer des couples de points aléatoires sur le cercle circonscrit du
+polygone pour former des droites candidates aléatoires
+
+**** Cercle circonscrit
+Un cercle est défini par son centre et son rayon. Le centre du cercle
+sera dans notre cas le barycentre des points formant le polygone à
+découper.
+
+#+begin_src python
+  def centroid(points: NDArrayFloat) -> NDArrayFloat:
+      return np.array([points[:, 0].mean(), points[:, 1].mean()], dtype=np.float_)
+  centro = centroid(P)
+  print(centro)
+#+end_src
+
+#+RESULTS:
+: [0.51971779 0.48916987]
+
+
+Maintenant que nous avons déterminé le centre du cercle, il nous faut
+déterminer son rayon. Pour cela, on va prendre la distance du point le
+plus eloigné du polygone, plus une éventuelle marge.
+
+#+begin_src python
+  ray = max([np.linalg.norm(p-centro) for p in P])
+  print(ray)
+#+end_src
+
+#+RESULTS:
+: 0.5663962210210228
+
+Dessinons maintenant ce cercle sur notre polygone.
+#+begin_src python
+  @disp
+  def draw(cr: cairo.Context, width: int, height: int):
+      cr.set_line_width(0.004)
+      cr.scale(width, height)
+      cr = polypath(cr, P)
+      cr.set_source_rgb(96, 125, 139)
+      cr.stroke()
+      cr.arc(centro[0], centro[1], ray, 0, 2*math.pi)
+      cr.stroke()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 1000
+[[file:./.ob-jupyter/054bb4211aec6c4e846c711c8a518884fa589037.png]]
+:END:
+
+ Choisissons maintenant deux points aléatoires *A* et *B* sur ce
+ cercle.
+
+ #+begin_src python
+   import random
+   a: float, b: float = random.random() * 2 * math.pi, random.random() * 2 * math.pi
+   A = np.array(centro + [ray*math.cos(a), ray*math.sin(a)], dtype=float)
+   B = np.array(centro + [ray*math.cos(b), ray*math.sin(b)], dtype=float)
+   print(A, B)
+ #+end_src
+
+ #+RESULTS:
+ : [0.12566278 0.89601791] [ 0.44835621 -0.07271286]
+
+ Dessinons maintenant ce cercle sur notre polygone.
+ #+begin_src python
+   @disp
+   def draw(cr: cairo.Context, width: int, height: int):
+       cr.set_line_width(0.004)
+       cr.scale(width, height)
+       cr = polypath(cr, P)
+       cr.set_source_rgb(96, 125, 139)
+       cr.stroke()
+       cr.arc(centro[0], centro[1], ray, 0, 2*math.pi)
+       cr.stroke()
+
+       cr.move_to(A[0], A[1])
+       cr.line_to(B[0], B[1])
+       cr.set_source_rgb(150, 30, 30)
+       cr.stroke()
+ #+end_src
+
+ #+RESULTS:
+ :RESULTS:
+ #+attr_org: :width 1000
+ [[file:./.ob-jupyter/f9688f9964b50930325a8ae94c1b6fd9591878f1.png]]
+ :END:
+
+*** Intersection ligne polygone
+**** Transformer le polygone en une liste de segments
+
+#+begin_src python
+  poly_seg = [np.array([c, d]) for c, d in zip(P[:-1], P[1:])]
+  poly_seg += [np.array([P[-1], P[0]])]
+  print(poly_seg)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  [array([[0.        , 0.33738318],
+         [0.04766355, 0.35420561]]), array([[0.04766355, 0.35420561],
+         [0.00934579, 0.38224299]]), array([[0.00934579, 0.38224299],
+         [0.04205607, 0.40654206]]), array([[0.04205607, 0.40654206],
+         [0.13271028, 0.43925234]]), array([[0.13271028, 0.43925234],
+         [0.18878505, 0.44485981]]), array([[0.18878505, 0.44485981],
+         [0.18878505, 0.4728972 ]]), array([[0.18878505, 0.4728972 ],
+         [0.22336449, 0.49906542]]), array([[0.22336449, 0.49906542],
+         [0.20934579, 0.52056075]]), array([[0.20934579, 0.52056075],
+         [0.28691589, 0.58037383]]), array([[0.28691589, 0.58037383],
+         [0.25981308, 0.87476636]]), array([[0.25981308, 0.87476636],
+         [0.2317757 , 0.90280374]]), array([[0.2317757 , 0.90280374],
+         [0.26261682, 0.93551402]]), array([[0.26261682, 0.93551402],
+         [0.3317757 , 0.96261682]]), array([[0.3317757 , 0.96261682],
+         [0.42803738, 0.95607477]]), array([[0.42803738, 0.95607477],
+         [0.49813084, 0.9953271 ]]), array([[0.49813084, 0.9953271 ],
+         [0.61214953, 0.99719626]]), array([[0.61214953, 0.99719626],
+         [0.60560748, 0.94485981]]), array([[0.60560748, 0.94485981],
+         [0.67663551, 0.87850467]]), array([[0.67663551, 0.87850467],
+         [0.8271028 , 0.92616822]]), array([[0.8271028 , 0.92616822],
+         [0.95514019, 0.85140187]]), array([[0.95514019, 0.85140187],
+         [0.96168224, 0.81214953]]), array([[0.96168224, 0.81214953],
+         [0.90373832, 0.79065421]]), array([[0.90373832, 0.79065421],
+         [0.91869159, 0.74205607]]), array([[0.91869159, 0.74205607],
+         [0.88411215, 0.71028037]]), array([[0.88411215, 0.71028037],
+         [0.9317757 , 0.67476636]]), array([[0.9317757 , 0.67476636],
+         [0.91121495, 0.61588785]]), array([[0.91121495, 0.61588785],
+         [0.88598131, 0.56542056]]), array([[0.88598131, 0.56542056],
+         [0.83457944, 0.59439252]]), array([[0.83457944, 0.59439252],
+         [0.86542056, 0.50747664]]), array([[0.86542056, 0.50747664],
+         [0.95046729, 0.43271028]]), array([[0.95046729, 0.43271028],
+         [1.        , 0.27196262]]), array([[1.        , 0.27196262],
+         [0.89813084, 0.24766355]]), array([[0.89813084, 0.24766355],
+         [0.86448598, 0.20934579]]), array([[0.86448598, 0.20934579],
+         [0.79626168, 0.20747664]]), array([[0.79626168, 0.20747664],
+         [0.74485981, 0.17196262]]), array([[0.74485981, 0.17196262],
+         [0.75233645, 0.12149533]]), array([[0.75233645, 0.12149533],
+         [0.69906542, 0.15420561]]), array([[0.69906542, 0.15420561],
+         [0.65981308, 0.09813084]]), array([[0.65981308, 0.09813084],
+         [0.56542056, 0.02803738]]), array([[0.56542056, 0.02803738],
+         [0.49252336, 0.04485981]]), array([[0.49252336, 0.04485981],
+         [0.48411215, 0.14299065]]), array([[0.48411215, 0.14299065],
+         [0.38037383, 0.18878505]]), array([[0.38037383, 0.18878505],
+         [0.42056075, 0.21028037]]), array([[0.42056075, 0.21028037],
+         [0.3588785 , 0.23271028]]), array([[0.3588785 , 0.23271028],
+         [0.27943925, 0.2271028 ]]), array([[0.27943925, 0.2271028 ],
+         [0.27102804, 0.18130841]]), array([[0.27102804, 0.18130841],
+         [0.22990654, 0.18598131]]), array([[0.22990654, 0.18598131],
+         [0.26448598, 0.3046729 ]]), array([[0.26448598, 0.3046729 ],
+         [0.14953271, 0.31962617]]), array([[0.14953271, 0.31962617],
+         [0.12897196, 0.29065421]]), array([[0.12897196, 0.29065421],
+         [0.        , 0.33738318]])]
+#+end_example
+
+**** Intersection entre deux segments
+
+#+begin_src python
+def intersection(ab: NDArrayFloat, cd: NDArrayFloat) -> Optional[tuple[NDArrayFloat, float, float]]:
+    """ Computes the intersection between two line segments; a to b, and c to d"""
+    a, b = ab
+    c, d = cd
+    ab = b - a
+    cd = d - c
+
+    cross = np.cross(ab, cd)
+
+    if cross == 0:
+        return None
+    else:
+        ac = c - a
+        t1 = np.cross(ac, cd) / cross
+        t2 = -np.cross(ab, ac) / cross
+        if all((t1 >= 0, t1 <= 1, t2 >= 0, t2 <= 1)):
+            return a + ab*t1 #, t1, t2
+        return None
+#+end_src
+
+#+RESULTS:
+
+**** Tests d'intersection sur chacun des segments
+
+#+begin_src python
+  AB = np.array([A, B])
+  intersections = [intersection(AB, CD) for CD in poly_seg]
+  print(intersections)
+#+end_src
+
+#+RESULTS:
+: [None, None, None, None, None, None, None, None, array([0.24227347, 0.54595077]), None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, array([0.34689855, 0.23186464]), None, None, None, None, None, None]
+
+  Dessinons maintenant ce cercle sur notre polygone.
+ #+begin_src python
+   @disp
+   def draw(cr: cairo.Context, width: int, height: int):
+       cr.set_line_width(0.004)
+       cr.scale(width, height)
+       cr = polypath(cr, P)
+       cr.set_source_rgb(96, 125, 139)
+       cr.stroke()
+       cr.arc(centro[0], centro[1], ray, 0, 2*math.pi)
+       cr.stroke()
+
+       cr.move_to(A[0], A[1])
+       cr.line_to(B[0], B[1])
+       cr.set_source_rgb(150, 30, 30)
+       cr.stroke()
+       for inter in intersections:
+           if inter is not None:
+               cr.arc(inter[0], inter[1], 0.01, 0, 2*math.pi)
+               cr.set_source_rgb(.8, .1, .1)
+               cr.fill()
+ #+end_src
+
+ #+RESULTS:
+ :RESULTS:
+ #+attr_org: :width 1000
+ [[file:./.ob-jupyter/009fe90454964f0b3f21df2b40e72b36691c17d2.png]]
+ :END:
+**** Séparation des polygones résultants de la découpe
+
+Il nous faut déjà récuperer les index des segments qui interséquent
+notre droite AB. On ne s'intéressera qu'aux droites qui coupent
+exactement deux fois notre polygone.
+
+#+begin_src python
+  inter_indexes = [i for i, inter in enumerate(intersections) if inter is not None]
+  assert len(inter_indexes)==2, "Pas exactement deux intersections entre AB et P"
+  print(inter_indexes)
+#+end_src
+
+#+RESULTS:
+: [8, 44]
+
+Le premier polygone que nous allons reconstruire aura comme point de
+départ le premier point d'intersection. Puis tous les points entre ce
+point et le second point d'intersection, puis le second point
+d'intersection.
+
+#+begin_src python
+  poly1 = np.concatenate(([intersections[inter_indexes[0]]],
+                         P[inter_indexes[0]+1:inter_indexes[1]+1],
+                         [intersections[inter_indexes[1]]]), axis=0)
+  print(poly1)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  [[0.24227347 0.54595077]
+   [0.28691589 0.58037383]
+   [0.25981308 0.87476636]
+   [0.2317757  0.90280374]
+   [0.26261682 0.93551402]
+   [0.3317757  0.96261682]
+   [0.42803738 0.95607477]
+   [0.49813084 0.9953271 ]
+   [0.61214953 0.99719626]
+   [0.60560748 0.94485981]
+   [0.67663551 0.87850467]
+   [0.8271028  0.92616822]
+   [0.95514019 0.85140187]
+   [0.96168224 0.81214953]
+   [0.90373832 0.79065421]
+   [0.91869159 0.74205607]
+   [0.88411215 0.71028037]
+   [0.9317757  0.67476636]
+   [0.91121495 0.61588785]
+   [0.88598131 0.56542056]
+   [0.83457944 0.59439252]
+   [0.86542056 0.50747664]
+   [0.95046729 0.43271028]
+   [1.         0.27196262]
+   [0.89813084 0.24766355]
+   [0.86448598 0.20934579]
+   [0.79626168 0.20747664]
+   [0.74485981 0.17196262]
+   [0.75233645 0.12149533]
+   [0.69906542 0.15420561]
+   [0.65981308 0.09813084]
+   [0.56542056 0.02803738]
+   [0.49252336 0.04485981]
+   [0.48411215 0.14299065]
+   [0.38037383 0.18878505]
+   [0.42056075 0.21028037]
+   [0.3588785  0.23271028]
+   [0.34689855 0.23186464]]
+#+end_example
+
+Dessinons maintenant ce polygone.
+ #+begin_src python
+   @disp
+   def draw(cr: cairo.Context, width: int, height: int):
+       cr.set_line_width(0.004)
+       cr.scale(width, height)
+       cr = polypath(cr, poly1)
+       cr.set_source_rgb(96, 125, 139)
+       cr.fill()
+       cr.arc(centro[0], centro[1], ray, 0, 2*math.pi)
+       cr.stroke()
+
+       cr.move_to(A[0], A[1])
+       cr.line_to(B[0], B[1])
+       cr.set_source_rgb(0, 0, 0.7)
+       cr.stroke()
+       for inter in intersections:
+           if inter is not None:
+               cr.arc(inter[0], inter[1], 0.01, 0, 2*math.pi)
+               cr.set_source_rgb(.8, .1, .1)
+               cr.fill()
+ #+end_src
+
+ #+RESULTS:
+ :RESULTS:
+ #+attr_org: :width 1000
+ [[file:./.ob-jupyter/4b735836596bc4672837282d110478744e0e1336.png]]
+ :END:
+
+Le second polygone reconstruit partira du second point
+d'intersection, ira jusqua la fin de P, continuera avec le début de P
+jusqu'a la première intersection.
+
+ #+begin_src python
+   poly2 = np.concatenate(([intersections[inter_indexes[1]]],
+                          P[inter_indexes[1]+1:],
+                          P[:inter_indexes[0]+1],
+                          [intersections[inter_indexes[0]]]), axis=0)
+   print(poly2)
+ #+end_src
+
+ #+RESULTS:
+ #+begin_example
+   [[0.34689855 0.23186464]
+    [0.27943925 0.2271028 ]
+    [0.27102804 0.18130841]
+    [0.22990654 0.18598131]
+    [0.26448598 0.3046729 ]
+    [0.14953271 0.31962617]
+    [0.12897196 0.29065421]
+    [0.         0.33738318]
+    [0.04766355 0.35420561]
+    [0.00934579 0.38224299]
+    [0.04205607 0.40654206]
+    [0.13271028 0.43925234]
+    [0.18878505 0.44485981]
+    [0.18878505 0.4728972 ]
+    [0.22336449 0.49906542]
+    [0.20934579 0.52056075]
+    [0.24227347 0.54595077]]
+ #+end_example
+
+Dessinons maintenant ce polygone.
+ #+begin_src python
+   @disp
+   def draw(cr: cairo.Context, width: int, height: int):
+       cr.set_line_width(0.004)
+       cr.scale(width, height)
+       cr = polypath(cr, poly2)
+       cr.set_source_rgb(96, 125, 139)
+       cr.fill()
+       cr.arc(centro[0], centro[1], ray, 0, 2*math.pi)
+       cr.stroke()
+
+       cr.move_to(A[0], A[1])
+       cr.line_to(B[0], B[1])
+       cr.set_source_rgb(0, 0, 0.7)
+       cr.stroke()
+       for inter in intersections:
+           if inter is not None:
+               cr.arc(inter[0], inter[1], 0.01, 0, 2*math.pi)
+               cr.set_source_rgb(.8, .1, .1)
+               cr.fill()
+ #+end_src
+
+ #+RESULTS:
+ :RESULTS:
+ #+attr_org: :width 1000
+ [[file:./.ob-jupyter/29d65813283cbdc288208dbed2644cbc0751b463.png]]
+ :END:
+
+**** Aire des polygones
+
+#+begin_src python
+  from shapely.geometry import Polygon
+
+
+  P_shap = Polygon(P)
+  total_area = P_shap.area
+
+  poly1_shap = Polygon(poly1)
+  poly2_shap = Polygon(poly2)
+  prop1 = poly1_shap.area/total_area
+  prop2 = poly2_shap.area/total_area
+  print(P_shap.area, prop1, prop2)
+#+end_src
+
+#+RESULTS:
+: 0.5539256703642244 0.9144615591778581 0.08553844082214224
